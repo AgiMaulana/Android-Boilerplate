@@ -26,3 +26,18 @@ include(":app")
 include(
     ":feature:sample",
 )
+
+include(
+    ":core:common",
+    ":core:design",
+    ":core:network",
+    ":core:network:test",
+    ":core:shared-test",
+)
+
+include(
+    ":domain:api",
+    ":domain:impl",
+)
+
+include(":infrastructure")

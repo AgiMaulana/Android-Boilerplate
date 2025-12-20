@@ -1,8 +1,9 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    alias(libs.plugins.android.application)
+    alias(libs.plugins.boilerplate.android.application)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.boilerplate.jetpack.compose)
 }
 
 android {
@@ -29,8 +30,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.valueOf(libs.versions.jdk.get())
+        targetCompatibility = JavaVersion.valueOf(libs.versions.jdk.get())
     }
     kotlin {
         compilerOptions {
@@ -40,9 +41,15 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:design"))
+    implementation(project(":domain:impl"))
+    implementation(project(":infrastructure"))
+    implementation(project(":feature:sample"))
     implementation(libs.android.material)
     implementation(libs.androidx.core.ktx)
+
     testImplementation(libs.junit)
+
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

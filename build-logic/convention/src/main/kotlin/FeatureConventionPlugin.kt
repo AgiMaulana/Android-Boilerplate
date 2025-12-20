@@ -1,5 +1,4 @@
 import com.android.build.api.dsl.LibraryExtension
-import com.pajk.idpersonaldoc.configureJacoco
 import com.pajk.idpersonaldoc.configureView
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -14,8 +13,8 @@ class FeatureConventionPlugin : Plugin<Project> {
             val libs = extensions.getByType<VersionCatalogsExtension>().named("libs")
 
             with(pluginManager) {
-                apply("radio247fm.android.library")
-                apply("radio247fm.android.hilt")
+                apply("boilerplate.android.library")
+                apply("boilerplate.android.hilt")
                 apply("org.jetbrains.kotlin.android")
                 apply("org.jetbrains.kotlin.plugin.compose")
                 apply("kotlin-parcelize")
@@ -28,10 +27,9 @@ class FeatureConventionPlugin : Plugin<Project> {
                 add("implementation", libs.findLibrary("moshi").get())
                 add("ksp", libs.findLibrary("moshi.codegen").get())
                 add("implementation", libs.findLibrary("kotlinx.coroutines.core").get())
-                add("implementation", libs.findLibrary("joda.time").get())
                 add("implementation", libs.findLibrary("compose.lifecycle.runtime").get())
 
-                add("testImplementation", libs.findLibrary("turbin").get())
+                add("testImplementation", libs.findLibrary("turbine").get())
                 add("testImplementation", libs.findLibrary("junit").get())
                 add("testImplementation", libs.findLibrary("androidx.arch.core.testing").get())
                 add("testImplementation", libs.findLibrary("androidx.lifecycle.runtime.test").get())

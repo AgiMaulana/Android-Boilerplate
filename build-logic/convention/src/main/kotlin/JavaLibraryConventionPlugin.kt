@@ -4,6 +4,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.kotlin.dsl.configure
+import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.getByType
 import org.gradle.kotlin.dsl.provideDelegate
 import org.gradle.kotlin.dsl.withType
@@ -38,6 +39,10 @@ class JavaLibraryConventionPlugin : Plugin<Project> {
                     allWarningsAsErrors.set(warningsAsErrors.toBoolean())
                     freeCompilerArgs.add("-opt-in=kotlin.RequiresOptIn")
                 }
+            }
+
+            dependencies {
+                add("implementation", libs.findLibrary("joda.time").get())
             }
         }
     }

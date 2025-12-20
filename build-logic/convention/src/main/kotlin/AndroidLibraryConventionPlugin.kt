@@ -1,7 +1,7 @@
 import com.android.build.api.dsl.LibraryExtension
 import com.pajk.idpersonaldoc.configureAndroid
-import com.pajk.idpersonaldoc.configureEnv
 import com.pajk.idpersonaldoc.configureJacoco
+import com.pajk.idpersonaldoc.configureProductFlavors
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.VersionCatalogsExtension
@@ -15,12 +15,12 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
             with(pluginManager) {
                 apply("com.android.library")
                 apply("org.jetbrains.kotlin.android")
-                apply("radio247fm.android.hilt")
+                apply("boilerplate.android.hilt")
             }
 
             extensions.configure<LibraryExtension> {
                 configureAndroid(this)
-                configureEnv(this)
+                configureProductFlavors(this)
             }
             configureJacoco()
 
@@ -30,8 +30,10 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                 add("implementation", libs.findLibrary("kotlinx.coroutines.core").get())
                 add("implementation", libs.findLibrary("retrofit.converter.moshi").get())
                 add("ksp", libs.findLibrary("moshi.codegen").get())
+                add("implementation", libs.findLibrary("joda.time").get())
 
                 add("testImplementation", libs.findLibrary("kotlinx.coroutines.test").get())
+                add("testImplementation", libs.findLibrary("junit").get())
             }
         }
     }
