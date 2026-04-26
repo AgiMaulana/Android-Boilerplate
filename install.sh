@@ -1,64 +1,67 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-set -e
+DEFAULT_BRANCH="agi/install-script"
+DRY_RUN=false
+VERIFY=false
 
-if [[ $# -ne 2 ]]; then
-  echo "Usage: curl -s https://raw.githubusercontent.com/AgiMaulana/Android-Boilerplate/agi/install-script/install.sh | bash -s -- \"ProjectName\" \"com.example.myapp\""
-  exit 1
-fi
+log(){ echo "[INFO] $1"; }
+err(){ echo "[ERROR] $1"; }
+run(){ [[ "$DRY_RUN" == true ]] && echo "[DRY-RUN] $*" || eval "$@"; }
 
-PROJECT_NAME="$1"
-PACKAGE_NAME="$2"
-OLD_PACKAGE="io.github.agimaulana.boilerplate"
-REPO_URL="https://github.com/AgiMaulana/Android-Boilerplate.git"
+cleanup(){ [[ -d "${TEMP_DIR:-}" ]] && rm -rf "$TEMP_DIR"; }
+trap cleanup EXIT
+
+PROJECT_NAME="${1:-}"
+PACKAGE_NAME="${2:-}"
+BRANCH="${3:-$DEFAULT_BRANCH}"
+
+[[ -z "$PROJECT_NAME" || -z "$PACKAGE_NAME" ]] && { err "Usage: $0 <project> <package> [branch]"; exit 1; }
+
+[[ "$PACKAGE_NAME" =~ ^[a-z]+(\.[a-z][a-z0-9_]*)+$ ]] || { err "Invalid package: $PACKAGE_NAME"; exit 1; }
+
+[[ -d "$PROJECT_NAME" ]] && { err "Directory exists: $PROJECT_NAME"; exit 1; }
+
+command -v git >/dev/null || { err "git required"; exit 1; }
+command -v rsync >/dev/null || { err "rsync required"; exit 1; }
+
 TEMP_DIR=$(mktemp -d)
+log "Cloning template ($BRANCH)..."
+run "git clone --depth=1 --branch $BRANCH https://github.com/AgiMaulana/Android-Boilerplate.git $TEMP_DIR"
 
-echo "Cloning boilerplate..."
-git clone --depth 1 --branch agi/install-script "$REPO_URL" "$TEMP_DIR" > /dev/null 2>&1
+log "Copying project..."
+run "rsync -a --exclude='.git' $TEMP_DIR/ $PROJECT_NAME/"
+cd "$PROJECT_NAME"
 
-echo "Creating new project: $PROJECT_NAME"
-cp -r "$TEMP_DIR" "./$PROJECT_NAME"
-cd "./$PROJECT_NAME"
+OLD_PACKAGE="io.github.agimaulana.boilerplate"
+OLD_PATH="${OLD_PACKAGE//./\/}"
+NEW_PATH="${PACKAGE_NAME//./\/}"
 
-echo "Removing git history..."
-rm -rf .git
+log "Replacing package occurrences..."
+run "grep -rl '$OLD_PACKAGE' . | xargs sed -i.bak 's|$OLD_PACKAGE|$PACKAGE_NAME|g' || true"
+run "find . -name '*.bak' -delete"
 
-# Convert packages to path segments (reversed domain style)
-OLD_SEGMENTS=(${OLD_PACKAGE//./ })
-NEW_SEGMENTS=(${PACKAGE_NAME//./ })
-
-# Reverse arrays to build path from root (e.g., io -> com)
-OLD_PATH=$(printf "/%s" "${OLD_SEGMENTS[@]}")
-NEW_PATH=$(printf "/%s" "${NEW_SEGMENTS[@]}")
-
-echo "Renaming package directories: $OLD_PACKAGE -> $PACKAGE_NAME"
-
-# List of all modules from your settings.gradle.kts
-MODULES=("app" "feature/sample" "core/common" "core/design" "core/network" "core/network/test" "core/shared-test" "domain/api" "domain/impl" "infrastructure")
-
-for MODULE in "${MODULES[@]}"; do
-  for SOURCE_SET in src/*/kotlin src/*/java; do  # Covers main, test, androidTest, etc.
-    FULL_OLD="$MODULE/$SOURCE_SET$OLD_PATH"
-    FULL_NEW="$MODULE/$SOURCE_SET$NEW_PATH"
-
-    if [[ -d "$FULL_OLD" ]]; then
-      echo "  Renaming $FULL_OLD -> $FULL_NEW"
-      mkdir -p "$(dirname "$FULL_NEW")"
-      mv "$FULL_OLD" "$FULL_NEW"
-    fi
-  done
+log "Moving source directories..."
+find . -type d \( -path '*/src/*/kotlin' -o -path '*/src/*/java' \) | while read -r dir; do
+  if [[ -d "$dir/$OLD_PATH" ]]; then
+    run "mkdir -p \"$(dirname \"$dir/$NEW_PATH\")\""
+    run "mv \"$dir/$OLD_PATH\" \"$dir/$NEW_PATH\""
+  else
+    log "Skip: $dir/$OLD_PATH"
+  fi
 done
 
-# Now update package declarations in .kt/.java files and config files (safe, targeted)
-find . -type f \( -name "*.kt" -o -name "*.java" \) -exec sed -i.bak "s|package $OLD_PACKAGE|package $PACKAGE_NAME|g" {} \;
-find . -type f \( -name "build.gradle.kts" -o -name "AndroidManifest.xml" \) -exec sed -i.bak "s|$OLD_PACKAGE|$PACKAGE_NAME|g" {} \;
-find . -type f -name "*.bak" -delete
+if [[ -n "${ANDROID_SDK_ROOT:-}" ]]; then
+  log "Writing local.properties"
+  run "echo 'sdk.dir=$ANDROID_SDK_ROOT' > local.properties"
+fi
 
-echo "Cleanup..."
-cd ..
-rm -rf "$TEMP_DIR"
+log "Initializing git"
+run "git init"
 
-echo ""
-echo "Done! Project '$PROJECT_NAME' created with package '$PACKAGE_NAME'."
-echo "Directory structure now uses proper reversed domains if source folders existed."
-echo "Open in Android Studio to verify/sync."
+if [[ "$VERIFY" == true ]]; then
+  log "Running build verification"
+  run "./gradlew assembleDebug"
+fi
+
+log "Done: $PROJECT_NAME ($PACKAGE_NAME)"
